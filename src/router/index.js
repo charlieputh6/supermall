@@ -20,8 +20,8 @@ const routes = [
     component: () => import('../views/cart/Cart')
   },
   {
-    path: '/sort',
-    component: () => import('../views/sort/Sort')
+    path: '/category',
+    component: () => import('../views/category/Category')
   },
   {
     path: '/profile',
