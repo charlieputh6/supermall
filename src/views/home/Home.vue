@@ -1,7 +1,13 @@
 <template>
   <div id="home" class="wrapper">
     <nav-bar class="nav-bar"><div slot="center">购物街</div></nav-bar>
-
+    <tab-control
+      :titles="['流行', '新款', '精选']"
+      @tableClick="tableClick"
+      ref="tabControl1"
+      class="tab-control"
+      v-show="isTabFixed"
+    ></tab-control>
     <Scroll
       class="content"
       ref="scroll"
@@ -10,13 +16,16 @@
       :pull-up-load="true"
       @pullingUp="loadMore"
     >
-      <home-swiper :banners="banners"></home-swiper>
+      <home-swiper
+        :banners="banners"
+        @swiperImageLoad="swiperImageLoad"
+      ></home-swiper>
       <home-recommend-view :recommends="recommends"></home-recommend-view>
       <feature-view></feature-view>
       <tab-control
         :titles="['流行', '新款', '精选']"
-        class="tabControl"
         @tableClick="tableClick"
+        ref="tabControl2"
       ></tab-control>
       <!-- tableClick子传父会默认把参数传进来 所以不用写 -->
       <goods-list :goods="showGoods"></goods-list>
@@ -42,6 +51,7 @@ import FeatureView from "./childComps/FeatureView.vue";
 
 // 导入的方法
 import { getHomeMultidata, getHomeGoods } from "network/home";
+import { debounce } from "common/utils";
 export default {
   components: {
     NavBar,
@@ -64,7 +74,20 @@ export default {
       },
       currentType: "pop",
       isShowBackTop: false,
+      tabOffsetTop: 0,
+      isTabFixed: false,
+      saveY: 0,
     };
+  },
+  // 回到当前页面
+  activated() {
+    this.$refs.scroll.refresh();
+    // 回到当前上次浏览的地方
+    this.$refs.scroll.scrollTo(0, this.saveY, 0);
+  },
+  deactivated() {
+    // 记录离开首页时的位置
+    this.saveY = this.$refs.scroll.getScrollY();
   },
   created() {
     // 1.请求多个数据  轮播图的数据
@@ -75,6 +98,13 @@ export default {
     this.getHomeGoods("pop");
     this.getHomeGoods("new");
     this.getHomeGoods("sell");
+  },
+  mounted() {
+    // 3.监听item中图片加载完成
+    const refresh = debounce(this.$refs.scroll.refresh, 500);
+    this.$bus.$on("itemImageLoad", () => {
+      refresh();
+    });
   },
   computed: {
     showGoods() {
@@ -96,6 +126,8 @@ export default {
           this.currentType = "sell";
           break;
       }
+      this.$refs.tabControl1.currentIndex = index;
+      this.$refs.tabControl2.currentIndex = index;
     },
     // 网络请求数据的方法
     getHomeMultidata() {
@@ -117,8 +149,8 @@ export default {
         this.goods[type].list.push(...res.data.list);
         // 最后将原本的页数加一
         this.goods[type].page += 1;
-        // 完成上拉加载 否则只会上拉加载一次
-        this.$refs.scroll.finishPullUp();
+        // 完成上拉加载更多
+        this.$refs.scroll.finishPullUp1();
       });
     },
     backClick() {
@@ -129,10 +161,20 @@ export default {
       this.$refs.scroll.scrollTo(0, 0, 500);
     },
     scrollContent(position) {
+      // 判断BackTop是否显示
       this.isShowBackTop = -position.y > 1000;
+      // 决定tabControl是否吸顶 判断页面滚动到哪儿了
+      this.isTabFixed = -position.y > this.tabOffsetTop;
     },
     loadMore() {
       this.getHomeGoods(this.currentType);
+    },
+    // 为完成吸顶效果 监听主要是轮播图加载完成
+    //获取tabControl的offset
+    // 所有的组件都有一个属性$el,用于获取组件中的元素
+
+    swiperImageLoad() {
+      this.tabOffsetTop = this.$refs.tabControl2.$el.offsetTop;
     },
   },
 };
@@ -145,16 +187,17 @@ export default {
   height: 100vh;
 }
 .nav-bar {
-  position: sticky;
-  top: 0;
   background-color: var(--color-tint);
   color: #fff;
-  z-index: 3;
 }
 /* 不起作用原因 不是原生js帮我们做滚动 而是better-scroll 系统没法检测滚动到哪里了  */
-.tabControl {
-  position: sticky;
-  top: 44px;
+/* .tabControl {
+  position: relative;
+  top: 35px;
+  z-index: 3;
+} */
+.tab-control {
+  position: relative;
   z-index: 3;
 }
 /* 用定位来代替计算  */
@@ -166,5 +209,12 @@ export default {
   bottom: 49px;
   left: 0;
   right: 0;
+}
+
+/* 就是这个问题 */
+.wrapper {
+  height: auto;
+  width: 100%;
+  background: white;
 }
 </style>

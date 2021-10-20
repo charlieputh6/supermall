@@ -119,7 +119,8 @@ export default {
 };
 </script>
 
-<style>
+// scoped限制只能在当前页面引用
+<style scoped>
 .wrapper {
   height: 150px;
   background-color: pink;
