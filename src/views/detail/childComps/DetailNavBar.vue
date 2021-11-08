@@ -1,5 +1,8 @@
 <template>
   <nav-bar>
+    <div slot="left" @click="backClick">
+      <img src="~assets/img/common/back.svg" alt="" class="back" />
+    </div>
     <div slot="center" class="title">
       <div
         v-for="(item, index) in titles"
@@ -29,6 +32,10 @@ export default {
   methods: {
     titleClick(index) {
       this.currentIndex = index;
+      this.$emit("titleClick", index);
+    },
+    backClick() {
+      this.$router.back();
     },
   },
 };
@@ -44,5 +51,8 @@ export default {
 }
 .active {
   color: var(--color-high-text);
+}
+.back {
+  vertical-align: middle;
 }
 </style>
